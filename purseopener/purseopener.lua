@@ -14,6 +14,11 @@ local nextAction = 0;
 
 local showWindow = true;
 
+local function IsInGame()
+    local entity = GetEntity(0);
+    return entity ~= nil and entity.Name ~= nil and entity.Name ~= '';
+end
+
 local linenTerm  = string.lower('Lin. Purse (Alx.)');
 local cottonTerm = string.lower('Ctn. Purse (Alx.)');
 local alexTerm   = string.lower('Alexandrite');
