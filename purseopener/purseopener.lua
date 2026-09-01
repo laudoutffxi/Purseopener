@@ -12,7 +12,7 @@ local baseDelay = 2;
 local active = false;
 local nextAction = 0;
 
-local showWindow = true;
+local showWindow = false;
 
 local function IsInGame()
     local entity = GetEntity(0);
