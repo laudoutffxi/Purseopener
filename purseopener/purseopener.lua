@@ -73,6 +73,23 @@ local function GetPurseCounts()
     return linen, cotton;
 end
 
+-- Returns true when all 80 normal inventory slots are occupied.
+-- Empty slots are identified by an item with Id == 0.
+local function IsInventoryFull()
+    local invMgr = AshitaCore:GetMemoryManager():GetInventory();
+    local used = 0;
+
+    for i = 1,80 do
+        local item = invMgr:GetContainerItem(0, i);
+
+        if (item ~= nil and item.Id > 0) then
+            used = used + 1;
+        end
+    end
+
+    return used >= 80, used;
+end
+
 ---------------------------------------------------------------------
 -- Locate purse by mode
 ---------------------------------------------------------------------
@@ -179,6 +196,18 @@ ashita.events.register('packet_out', 'purseopener_packet', function(e)
         return;
     end
 
+    -- Stop automatically if the normal inventory is full.
+    -- Opening another purse while there is no free slot can cause
+    -- the opener to keep trying without being able to receive items.
+    local inventoryFull, usedSlots = IsInventoryFull();
+
+    if inventoryFull then
+        active = false;
+        print(chat.header('PurseOpener') ..
+            chat.message('Inventory full (' .. usedSlots .. '/80 slots). Purse opener stopped.'));
+        return;
+    end
+
     local item, res = LocatePurse();
 
     if item == nil then
@@ -224,6 +253,13 @@ local function DrawPurseOpener()
         imgui.Text(string.format('  Linen Purse:   %d', linen));
         imgui.Text(string.format('  Cotton Purse:  %d', cotton));
         imgui.Text(string.format('  Total Purses:  %d', totalPurses));
+
+        local inventoryFull, usedSlots = IsInventoryFull();
+        imgui.Text(string.format('Inventory: %d / 80 slots', usedSlots));
+
+        if inventoryFull then
+            imgui.Text('INVENTORY FULL - OPENER STOPPED');
+        end
 
         imgui.Separator();
 
