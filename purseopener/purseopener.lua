@@ -23,7 +23,6 @@ local linenTerm  = string.lower('Lin. Purse (Alx.)');
 local cottonTerm = string.lower('Ctn. Purse (Alx.)');
 local alexTerm   = string.lower('Alexandrite');
 
--- Which purse type we are opening this run: 'linen', 'cotton', or 'both'
 local mode = 'linen';
 
 ---------------------------------------------------------------------
@@ -78,8 +77,6 @@ local function GetPurseCounts()
     return linen, cotton;
 end
 
--- Returns true when all 80 normal inventory slots are occupied.
--- Empty slots are identified by an item with Id == 0.
 local function IsInventoryFull()
     local invMgr = AshitaCore:GetMemoryManager():GetInventory();
     local used = 0;
@@ -147,7 +144,7 @@ local function OpenPurse(item, res)
 end
 
 ---------------------------------------------------------------------
--- Commands: start + stop + UI
+-- Commands
 ---------------------------------------------------------------------
 
 ashita.events.register('command', 'purseopener_command', function(e)
@@ -201,9 +198,6 @@ ashita.events.register('packet_out', 'purseopener_packet', function(e)
         return;
     end
 
-    -- Stop automatically if the normal inventory is full.
-    -- Opening another purse while there is no free slot can cause
-    -- the opener to keep trying without being able to receive items.
     local inventoryFull, usedSlots = IsInventoryFull();
 
     if inventoryFull then
@@ -230,6 +224,47 @@ ashita.events.register('packet_out', 'purseopener_packet', function(e)
 end);
 
 ---------------------------------------------------------------------
+-- FIXED BLUE HUD STYLE
+---------------------------------------------------------------------
+
+local colors = {
+    window_bg = { 0.025, 0.035, 0.050, 0.97 },
+    child_bg  = { 0.045, 0.050, 0.060, 0.94 },
+    border    = { 0.10, 0.48, 0.72, 1.00 },
+    separator = { 0.10, 0.36, 0.55, 0.90 },
+    header    = { 0.35, 0.68, 1.00, 1.00 },
+    text_main = { 0.92, 0.92, 0.92, 1.00 },
+    text_dim  = { 0.60, 0.67, 0.74, 1.00 },
+    good      = { 0.35, 1.00, 0.45, 1.00 },
+    bad       = { 1.00, 0.30, 0.25, 1.00 },
+};
+
+local function PushBlueHudStyle()
+    imgui.PushStyleColor(ImGuiCol_WindowBg, colors.window_bg);
+    imgui.PushStyleColor(ImGuiCol_ChildBg, colors.child_bg);
+    imgui.PushStyleColor(ImGuiCol_Border, colors.border);
+    imgui.PushStyleColor(ImGuiCol_Separator, colors.separator);
+    imgui.PushStyleColor(ImGuiCol_TitleBg, { 0.025, 0.095, 0.145, 1.00 });
+    imgui.PushStyleColor(ImGuiCol_TitleBgActive, { 0.035, 0.16, 0.24, 1.00 });
+    imgui.PushStyleColor(ImGuiCol_TitleBgCollapsed, { 0.025, 0.095, 0.145, 1.00 });
+    imgui.PushStyleColor(ImGuiCol_ScrollbarBg, { 0.02, 0.035, 0.05, 0.90 });
+    imgui.PushStyleColor(ImGuiCol_ScrollbarGrab, { 0.08, 0.42, 0.66, 1.00 });
+    imgui.PushStyleColor(ImGuiCol_ScrollbarGrabHovered, { 0.10, 0.55, 0.82, 1.00 });
+    imgui.PushStyleColor(ImGuiCol_ScrollbarGrabActive, { 0.12, 0.65, 0.95, 1.00 });
+
+    imgui.PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0);
+    imgui.PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0);
+    imgui.PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0);
+    imgui.PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0);
+    imgui.PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0);
+end
+
+local function PopBlueHudStyle()
+    imgui.PopStyleVar(5);
+    imgui.PopStyleColor(11);
+end
+
+---------------------------------------------------------------------
 -- ImGui UI
 ---------------------------------------------------------------------
 
@@ -241,48 +276,44 @@ local function DrawPurseOpener()
     local linen, cotton = GetPurseCounts();
     local alex = GetInventoryItemCount(alexTerm);
     local totalPurses = linen + cotton;
+    local inventoryFull, usedSlots = IsInventoryFull();
 
-    imgui.PushStyleColor(ImGuiCol_WindowBg, {0.10, 0.10, 0.10, 0.90});
-    imgui.PushStyleColor(ImGuiCol_Border, {0.35, 0.35, 0.35, 1.0});
+    PushBlueHudStyle();
 
-    local visible = imgui.Begin('PurseOpener Alexandrite', true);
+    imgui.SetNextWindowSize({ 430, 360 }, ImGuiCond_FirstUseEver);
+
+    local visible = imgui.Begin('PurseOpener - Alexandrite##purseopener_blue', true);
 
     if visible then
-        --------------------------------------------------
-        -- HEADER
-        --------------------------------------------------
-        imgui.PushStyleColor(ImGuiCol_Text, {0.95, 0.85, 0.30, 1.0});
+        imgui.PushStyleColor(ImGuiCol_Text, colors.header);
         imgui.Text('ALEXANDRITE PURSE OPENER');
         imgui.PopStyleColor();
         imgui.Separator();
 
-        --------------------------------------------------
-        -- INVENTORY SUMMARY
-        --------------------------------------------------
-        imgui.TextColored({0.92, 0.92, 0.92, 1.0}, 'Alexandrite in inventory:');
+        imgui.TextColored(colors.text_main, 'Alexandrite in inventory:');
         imgui.SameLine();
-        imgui.TextColored({0.35, 1.0, 0.45, 1.0}, tostring(alex));
+        imgui.TextColored(colors.good, tostring(alex));
 
         imgui.Separator();
 
-        imgui.TextColored({0.92, 0.92, 0.92, 1.0}, 'Purses in inventory');
-        imgui.Text(string.format('  Linen Purse:   %d', linen));
-        imgui.Text(string.format('  Cotton Purse:  %d', cotton));
-        imgui.Text(string.format('  Total Purses:  %d', totalPurses));
+        imgui.TextColored(colors.header, 'PURSES');
+        imgui.TextColored(colors.text_main, string.format('Linen Purse:   %d', linen));
+        imgui.TextColored(colors.text_main, string.format('Cotton Purse:  %d', cotton));
+        imgui.TextColored(colors.text_main, string.format('Total Purses:  %d', totalPurses));
 
-        local inventoryFull, usedSlots = IsInventoryFull();
-        imgui.Text(string.format('Inventory: %d / 80 slots', usedSlots));
+        imgui.Separator();
+
+        imgui.TextColored(colors.text_main, string.format('Inventory: %d / 80 slots', usedSlots));
 
         if inventoryFull then
-            imgui.TextColored({1.0, 0.30, 0.25, 1.0}, 'INVENTORY FULL — OPENER STOPPED');
+            imgui.TextColored(colors.bad, 'INVENTORY FULL - OPENER STOPPED');
         end
 
         imgui.Separator();
 
-        --------------------------------------------------
-        -- MODE + BUTTONS
-        --------------------------------------------------
-        imgui.TextColored({0.92, 0.92, 0.92, 1.0}, 'Opening mode: ' .. string.upper(mode));
+        imgui.TextColored(colors.text_main, 'Opening mode:');
+        imgui.SameLine();
+        imgui.TextColored(colors.header, string.upper(mode));
 
         if imgui.Button('Open Linen') then
             mode = 'linen';
@@ -311,27 +342,20 @@ local function DrawPurseOpener()
         end
 
         imgui.SameLine();
-        imgui.TextColored(active and {0.35, 1.0, 0.45, 1.0} or {1.0, 0.30, 0.25, 1.0},
+        imgui.TextColored(active and colors.good or colors.bad,
             active and 'Status: RUNNING' or 'Status: STOPPED'
         );
 
         imgui.Separator();
 
-        --------------------------------------------------
-        -- COMMANDS
-        --------------------------------------------------
-        imgui.TextColored({0.60, 0.60, 0.60, 1.0}, 'Commands:');
-        imgui.TextColored({0.60, 0.60, 0.60, 1.0}, '/openlinen   /opencotton   /openpurses');
-        imgui.TextColored({0.60, 0.60, 0.60, 1.0}, '/stoppurses   /purseui');
-
-        imgui.End();
-    else
-        imgui.End();
+        imgui.TextColored(colors.text_dim, 'Commands:');
+        imgui.TextColored(colors.text_dim, '/openlinen   /opencotton   /openpurses');
+        imgui.TextColored(colors.text_dim, '/stoppurses   /purseui');
     end
 
-    imgui.PopStyleColor(2);
+    imgui.End();
+    PopBlueHudStyle();
 end
-
 
 ashita.events.register('d3d_present', 'purseopener_present', function()
     DrawPurseOpener();
